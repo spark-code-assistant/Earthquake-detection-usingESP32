@@ -1,0 +1,27 @@
+*Connections*
+ESP32 PIN CONNECTIONS
+=====================
+
+ADXL345 (Accelerometer):
+  VCC    → 3.3V
+  GND    → GND
+  SDA    → GPIO 21
+  SCL    → GPIO 22
+
+SSD1306 OLED Display:
+  VCC    → 3.3V
+  GND    → GND
+  SDA    → GPIO 21 (same as ADXL345)
+  SCL    → GPIO 22 (same as ADXL345)
+
+Buzzer:
+  (+)    → GPIO 2
+  (-)    → GND
+
+LED:
+  (+)    → GPIO 4 (through 220Ω resistor)
+  (-)    → GND
+
+Power:
+  USB    → ESP32 Micro USB port
+
