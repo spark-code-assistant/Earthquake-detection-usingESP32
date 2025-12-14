@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>🤖 Buddy Eyes - ESP32 Tilt Thingy</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        /* yeah so this is the vibe - dark cyberpunk but not tryhard */
+        :root {
+            --cyan: #00d4ff;
+            --orange: #ff9500;
+            --dark: #0a0e17;
+            --glass: rgba(255,255,255,0.08);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Courier New', monospace;
+            background: linear-gradient(135deg, #0a0e17 0%, #1a1f2b 100%);
+            color: #ccc;
+            min-height: 100vh;
+            padding: 20px;
+            overflow-x: hidden;
+        }
+
+        .main {
+            max-width: 1000px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 25px;
+        }
+
+        .header {
+            grid-column: 1/-1;
+            text-align: center;
+            padding: 20px 0;
+            border-bottom: 1px solid rgba(0,212,255,0.3);
+        }
+
+        h1 {
+            font-size: 2.2em;
+            background: linear-gradient(45deg, var(--cyan), var(--orange));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 5px;
+            text-shadow: 0 0 20px rgba(0,212,255,0.5);
+        }
+
+        .status {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 16px;
+            background: rgba(0,212,255,0.1);
+            border: 1px solid rgba(0,212,255,0.3);
+            border-radius: 25px;
+            font-size: 13px;
+            margin: 0 auto;
+        }
+
+        .dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #ff9500;
+            box-shadow: 0 0 10px #ff9500;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(1.1); }
+        }
+
+        .panel {
+            background: rgba(15,20,30,0.9);
+            border-radius: 15px;
+            padding: 20px;
+            border: 1px solid rgba(0,212,255,0.2);
+            backdrop-filter: blur(10px);
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+        }
+
+        .panel h3 {
+            color: var(--cyan);
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 15px;
+            opacity: 0.8;
+        }
+
+        /* yo the buddy face canvas */
+        #face {
+            width: 100%;
+            max-width: 450px;
+            height: 300px;
+            border-radius: 20px;
+            border: 2px solid rgba(0,212,255,0.4);
+            background: radial-gradient(circle at 50% 30%, rgba(0,212,255,0.1), transparent);
+            display: block;
+            margin: 0 auto 15px;
+        }
+
+        .mood {
+            text-align: center;
+            font-size: 18px;
+            font-weight: bold;
+            color: var(--orange);
+            text-shadow: 0 0 10px rgba(255,149,0,0.5);
+        }
+
+        /* data cards fr */
+        .dataz {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .card {
+            background: rgba(0,0,0,0.4);
+            padding: 15px;
+            border-radius: 12px;
+            border-left: 4px solid var(--cyan);
+            text-align: center;
+        }
+
+        .label {
+            font-size: 11px;
+            color: #888;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 5px;
+        }
+
+        .value {
+            font-size: 22px;
+            font-weight: bold;
+            color: var(--cyan);
+            text-shadow: 0 0 8px rgba(0,212,255,0.6);
+        }
+
+        .btnz {
+            display: flex;
+            gap: 10px;
+            margin: 15px 0;
+        }
+
+        button {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            font-family: inherit;
+            font-size: 12px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .go {
+            background: linear-gradient(45deg, var(--cyan), #00aaff);
+            color: #000;
+            box-shadow: 0 5px 20px rgba(0,212,255,0.4);
+        }
+
+        .go:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px rgba(0,212,255,0.6);
+        }
+
+        .reset {
+            background: transparent;
+            color: var(--cyan);
+            border: 2px solid rgba(0,212,255,0.5);
+        }
+
+        .reset:hover {
+            background: rgba(0,212,255,0.1);
+        }
+
+        /* chart time lol */
+        #chart {
+            width: 100%;
+            height: 160px;
+            border-radius: 12px;
+            background: rgba(0,0,0,0.6);
+            border: 1px solid rgba(0,212,255,0.3);
+        }
+
+        .hint {
+            font-size: 12px;
+            line-height: 1.5;
+            color: #777;
+            margin-top: 15px;
+            padding: 12px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 8px;
+            border-left: 3px solid var(--orange);
+        }
+
+        @media (max-width: 768px) {
+            .main { grid-template-columns: 1fr; gap: 20px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="main">
+        <div class="header">
+            <h1>🤖 Buddy Eyes Monitor</h1>
+            <div class="status">
+                <div class="dot" id="dot"></div>
+                <span id="status">Demo Mode 😎</span>
+            </div>
+        </div>
+
+        <!-- LEFT: the actual buddy face -->
+        <div class="panel">
+            <h3>Live Buddy Preview</h3>
+            <canvas id="face" width="450" height="300"></canvas>
+            <div class="mood" id="mood">chillin</div>
+        </div>
+
+        <!-- RIGHT: data + chart -->
+        <div class="panel">
+            <h3>Sensor Readings</h3>
+            
+            <div class="dataz">
+                <div class="card">
+                    <div class="label">Roll (X)</div>
+                    <div class="value" id="roll">0.0°</div>
+                </div>
+                <div class="card">
+                    <div class="label">Pitch (Y)</div>
+                    <div class="value" id="pitch">0.0°</div>
+                </div>
+                <div class="card">
+                    <div class="label">Z Accel</div>
+                    <div class="value" id="zacc">9.81 m/s²</div>
+                </div>
+                <div class="card">
+                    <div class="label">Samples</div>
+                    <div class="value" id="count">0</div>
+                </div>
+            </div>
+
+            <div class="btnz">
+                <button class="go" onclick="demoToggle()" id="demobtn">Start Vibes</button>
+                <button class="reset" onclick="resetAll()">Reset 😂</button>
+            </div>
+
+            <canvas id="chart" width="400" height="160"></canvas>
+
+            <div class="hint">
+                yo so this shows what ur ESP32 buddy is doing rn<br>
+                tilt = eyes move, pitch = up/down lookin<br>
+                if u want add websocket here fr serial data ;p
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // yeah so grab the canvases n stuff
+        const face = document.getElementById('face');
+        const fctx = face.getContext('2d');
+        const chart = document.getElementById('chart');
+        const cctx = chart.getContext('2d');
+
+        // state vars fr the demo
+        let roll = 0, pitch = 0, z = 9.8;
+        let demoActive = false;
+        let history = []; // keeps last 60 samples
+        let blinkTimer = 0, nextBlink = 3000 + Math.random()*2000;
+
+        // yo draw the buddy face (matches ur OLED code vibe)
+        function drawBuddy() {
+            const w = face.width, h = face.height;
+            const cx = w/2, cy = h/2;
+            fctx.clearRect(0,0,w,h);
+
+            // head outline (kinda glossy)
+            const headG = fctx.createRadialGradient(cx, cy-50, 0, cx, cy, 200);
+            headG.addColorStop(0, 'rgba(30,40,60,0.9)');
+            headG.addColorStop(1, 'rgba(5,10,20,0.95)');
+            fctx.fillStyle = headG;
+            fctx.beginPath();
+            fctx.roundRect(cx-100, cy-120, 200, 240, 50);
+            fctx.fill();
+            fctx.strokeStyle = 'rgba(0,212,255,0.4)';
+            fctx.lineWidth = 2;
+            fctx.stroke();
+
+            // eyes pos
+            const eyeGap = 55, eyeR = 28, pupilR = 13, eyeY = cy-25;
+
+            // pupil offset based on tilt (same math as ur arduino)
+            const maxOff = eyeR - pupilR - 3;
+            const offX = (roll/80)*maxOff;
+            const offY = (pitch/80)*maxOff;
+
+            // eyebrows (they move with pitch fr)
+            fctx.strokeStyle = '#ddd';
+            fctx.lineWidth = 3;
+            const browTilt = (pitch/80)*12;
+            fctx.beginPath();
+            fctx.moveTo(cx-eyeGap-18, eyeY-35);
+            fctx.lineTo(cx-eyeGap+12, eyeY-35-browTilt);
+            fctx.moveTo(cx+eyeGap-12, eyeY-35+browTilt);
+            fctx.lineTo(cx+eyeGap+18, eyeY-35);
+            fctx.stroke();
+
+            // draw eyes function
+            const drawEye = (ex) => {
+                if (blinkTimer > 0) { // blinkin
+                    fctx.strokeStyle = '#fff';
+                    fctx.lineWidth = 3;
+                    fctx.beginPath();
+                    fctx.moveTo(ex-eyeR, eyeY);
+                    fctx.lineTo(ex+eyeR, eyeY);
+                    fctx.stroke();
+                    return;
+                }
+
+                // eye white
+                fctx.fillStyle = '#f8f8ff';
+                fctx.beginPath();
+                fctx.arc(ex, eyeY, eyeR, 0, Math.PI*2);
+                fctx.fill();
+                fctx.strokeStyle = 'rgba(0,0,0,0.3)';
+                fctx.lineWidth = 2;
+                fctx.stroke();
+
+                // iris n pupil
+                fctx.fillStyle = '#4a9eff';
+                fctx.beginPath();
+                fctx.arc(ex+offX, eyeY+offY, pupilR, 0, Math.PI*2);
+                fctx.fill();
+
+                fctx.fillStyle = '#1a1a2e';
+                fctx.beginPath();
+                fctx.arc(ex+offX, eyeY+offY, pupilR*0.6, 0, Math.PI*2);
+                fctx.fill();
+
+                // lil shine
+                fctx.fillStyle = 'rgba(255,255,255,0.8)';
+                fctx.beginPath();
+                fctx.arc(ex+offX-5, eyeY+offY-5, pupilR*0.25, 0, Math.PI*2);
+                fctx.fill();
+            };
+
+            drawEye(cx-eyeGap);
+            drawEye(cx+eyeGap);
+
+            // nose
+            fctx.strokeStyle = 'rgba(200,200,200,0.8)';
+            fctx.lineWidth = 2;
+            fctx.beginPath();
+            fctx.moveTo(cx, eyeY+8);
+            fctx.lineTo(cx, eyeY+25);
+            fctx.stroke();
+
+            // mouth (changes with pitch)
+            const mouthY = cy+55;
+            fctx.strokeStyle = 'rgba(255,255,255,0.9)';
+            fctx.lineWidth = 3;
+            fctx.lineCap = 'round';
+            fctx.beginPath();
+            fctx.moveTo(cx-35, mouthY);
+            fctx.quadraticCurveTo(cx, mouthY + Math.abs(pitch/80)*15, cx+35, mouthY);
+            fctx.stroke();
+        }
+
+        // update mood text
+        function updateMood() {
+            const ar = Math.abs(roll), ap = Math.abs(pitch);
+            const mood = document.getElementById('mood');
+            
+            if (ap > 45) mood.textContent = pitch > 0 ? 'lookin down 👀' : 'lookin up 😲';
+            else if (ar > 45) mood.textContent = roll > 0 ? 'tilted rite 🤔' : 'tilted left 😏';
+            else if (ar > 25 || ap > 25) mood.textContent = 'scanning...';
+            else mood.textContent = 'chillin 😐';
+        }
+
+        // chart fr history (roll blue, pitch orange)
+        function drawChart() {
+            const w = chart.width, h = chart.height;
+            cctx.clearRect(0,0,w,h);
+
+            // grid
+            cctx.strokeStyle = 'rgba(0,212,255,0.2)';
+            cctx.lineWidth = 1;
+            for(let i=0; i<5; i++) {
+                const y = 25 + (i/4)*(h-50);
+                cctx.beginPath();
+                cctx.moveTo(35, y);
+                cctx.lineTo(w-10, y);
+                cctx.stroke();
+            }
+
+            if (history.length < 2) return;
+
+            const points = 60;
+            // roll line (cyan)
+            cctx.strokeStyle = 'rgba(0,212,255,0.9)';
+            cctx.lineWidth = 2;
+            cctx.lineCap = 'round';
+            cctx.beginPath();
+            history.slice(-points).forEach((pt,i) => {
+                const x = 35 + (i/points)*(w-45);
+                const y = (h/2) - (pt.r/80)*(h/2-30);
+                if(i===0) cctx.moveTo(x,y);
+                else cctx.lineTo(x,y);
+            });
+            cctx.stroke();
+
+            // pitch line (orange)
+            cctx.strokeStyle = 'rgba(255,149,0,0.9)';
+            cctx.lineWidth = 2;
+            cctx.lineCap = 'round';
+            cctx.beginPath();
+            history.slice(-points).forEach((pt,i) => {
+                const x = 35 + (i/points)*(w-45);
+                const y = (h/2) - (pt.p/80)*(h/2-30);
+                if(i===0) cctx.moveTo(x,y);
+                else cctx.lineTo(x,y);
+            });
+            cctx.stroke();
+        }
+
+        // demo toggle (replace this with ur esp32 websocket later ;p)
+        function demoToggle() {
+            demoActive = !demoActive;
+            const btn = document.getElementById('demobtn');
+            btn.textContent = demoActive ? 'Stop Vibes' : 'Start Vibes';
+            document.getElementById('status').textContent = demoActive ? 'Demo Runnin 🔥' : 'Demo Mode 😴';
+            document.querySelector('.dot').style.background = demoActive ? '#00ff88' : '#ff9500';
+        }
+
+        function resetAll() {
+            roll = pitch = 0; z = 9.8;
+            history = [];
+            demoActive = false;
+            blinkTimer = 0;
+            demoToggle(); // reset btn too
+            updateUI();
+        }
+
+        function updateUI() {
+            document.getElementById('roll').textContent = roll.toFixed(1)+'°';
+            document.getElementById('pitch').textContent = pitch.toFixed(1)+'°';
+            document.getElementById('zacc').textContent = z.toFixed(2)+' m/s²';
+            document.getElementById('count').textContent = history.length;
+        }
+
+        // main loop (60fps ish)
+        function loop(time) {
+            if (demoActive) {
+                // fake sensor data (replace with real ESP32 data fr)
+                roll = 45 * Math.sin(time * 0.002);
+                pitch = 45 * Math.cos(time * 0.0013);
+                z = 9.8 + 2 * Math.sin(time * 0.0017);
+            }
+
+            // blink logic (every 3-5 secs)
+            if (blinkTimer === 0 && time > nextBlink) {
+                blinkTimer = time;
+                nextBlink = time + 3000 + Math.random()*2000;
+            }
+            if (blinkTimer > 0 && time - blinkTimer < 100) {
+                // blinkin
+            } else {
+                blinkTimer = 0;
+            }
+
+            // push to history n update
+            history.push({r: roll, p: pitch});
+            if (history.length > 100) history.shift();
+
+            drawBuddy();
+            updateMood();
+            drawChart();
+            updateUI();
+
+            requestAnimationFrame(loop);
+        }
+
+        // kick it off
+        requestAnimationFrame(loop);
+    </script>
+</body>
+</html>
+
