@@ -1,9 +1,9 @@
 // Earthquake Detection System - ESP32 with Blynk IoT
 
 // ============ BLYNK CREDENTIALS (MUST BE FIRST!) ============
-#define BLYNK_TEMPLATE_ID "TMPL3Du2mhNke"
-#define BLYNK_TEMPLATE_NAME "Earthquake detection"
-#define BLYNK_AUTH_TOKEN "3-k-zMDSoZhFzag-KgPBcdSOpgvH77iu"
+#define BLYNK_TEMPLATE_ID "tempid"
+#define BLYNK_TEMPLATE_NAME "templatename"
+#define BLYNK_AUTH_TOKEN "authtoken"
 
 // ============ NOW INCLUDE LIBRARIES ============
 #include <Wire.h>
@@ -14,8 +14,8 @@
 #include <BlynkSimpleEsp32.h>
 
 // ============ WiFi CREDENTIALS - CHANGE THESE ============
-char ssid[] = "karan-2.4G-118A38";          // Change this to your WiFi name
-char pass[] = "karan@321";      // Change this to your WiFi password
+char ssid[] = "name";          // Change this to your WiFi name
+char pass[] = "pass";      // Change this to your WiFi password
 
 // ============ OLED DISPLAY SETUP ============
 #define SCREEN_WIDTH 128
